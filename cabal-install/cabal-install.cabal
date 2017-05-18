@@ -127,7 +127,7 @@ flag parsec
 
 flag lib
   description:  Build cabal-install as a library. Please only use this if you are a cabal-install developer.
-  Default:      False
+  Default:      True
   manual:       True
 
 -- Build everything (including the test binaries) as a single static binary
@@ -379,6 +379,7 @@ executable cabal
     other-modules: Paths_cabal_install
 
     if flag(lib)
+        buildable: False
         build-depends:
             cabal-install,
             Cabal      >= 2.1      && < 2.2,
