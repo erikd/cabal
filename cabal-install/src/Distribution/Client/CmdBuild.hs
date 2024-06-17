@@ -15,8 +15,10 @@ module Distribution.Client.CmdBuild
 
 import Distribution.Client.Compat.Prelude
 import Prelude ()
-
 import Distribution.Client.CmdErrorMessages
+import Distribution.Client.DistDirLayout
+  ( distProjectCacheDirectory
+  )
 import Distribution.Client.ProjectFlags
   ( removeIgnoreProjectOption
   )
@@ -25,7 +27,11 @@ import Distribution.Client.TargetProblem
   ( TargetProblem (..)
   , TargetProblem'
   )
-
+import Distribution.Client.TimingLog
+  ( closeTimingLog
+  , initTimingLog
+  , timingLogBracket
+  )
 import qualified Data.Map as Map
 import Distribution.Client.Errors
 import Distribution.Client.NixStyleOptions
@@ -43,6 +49,7 @@ import Distribution.Client.Setup
   ( CommonSetupFlags (..)
   , ConfigFlags (..)
   , GlobalFlags
+  , globalLogTiming
   , yesNoOpt
   )
 import Distribution.Simple.Command
@@ -136,54 +143,57 @@ defaultBuildFlags =
 buildAction :: NixStyleFlags BuildFlags -> [String] -> GlobalFlags -> IO ()
 buildAction flags@NixStyleFlags{extraFlags = buildFlags, ..} targetStrings globalFlags =
   withContextAndSelectors RejectNoTargets Nothing flags targetStrings globalFlags BuildCommand $ \targetCtx ctx targetSelectors -> do
-    -- TODO: This flags defaults business is ugly
-    let onlyConfigure =
-          fromFlag
-            ( buildOnlyConfigure defaultBuildFlags
-                <> buildOnlyConfigure buildFlags
-            )
-        targetAction
-          | onlyConfigure = TargetActionConfigure
-          | otherwise = TargetActionBuild
-
-    baseCtx <- case targetCtx of
-      ProjectContext -> return ctx
-      GlobalContext -> return ctx
-      ScriptContext path exemeta -> updateContextAndWriteProjectFile ctx path exemeta
-
-    buildCtx <-
-      runProjectPreBuildPhase verbosity baseCtx $ \elaboratedPlan -> do
-        -- Interpret the targets on the command line as build targets
-        -- (as opposed to say repl or haddock targets).
-        targets <-
-          either (reportBuildTargetProblems verbosity) return $
-            resolveTargets
-              selectPackageTargets
-              selectComponentTarget
-              elaboratedPlan
-              Nothing
-              targetSelectors
-
-        let elaboratedPlan' =
-              pruneInstallPlanToTargets
-                targetAction
-                targets
+    initTimingLog (fromFlag $ globalLogTiming globalFlags) (distProjectCacheDirectory $ distDirLayout ctx)
+    timingLogBracket "Top level buildAction" $ do
+      -- TODO: This flags defaults business is ugly
+      let onlyConfigure =
+            fromFlag
+              ( buildOnlyConfigure defaultBuildFlags
+                  <> buildOnlyConfigure buildFlags
+              )
+          targetAction
+            | onlyConfigure = TargetActionConfigure
+            | otherwise = TargetActionBuild
+  
+      baseCtx <- case targetCtx of
+        ProjectContext -> return ctx
+        GlobalContext -> return ctx
+        ScriptContext path exemeta -> updateContextAndWriteProjectFile ctx path exemeta
+  
+      buildCtx <-
+        runProjectPreBuildPhase verbosity baseCtx $ \elaboratedPlan -> do
+          -- Interpret the targets on the command line as build targets
+          -- (as opposed to say repl or haddock targets).
+          targets <-
+            either (reportBuildTargetProblems verbosity) return $
+              resolveTargets
+                selectPackageTargets
+                selectComponentTarget
                 elaboratedPlan
-        elaboratedPlan'' <-
-          if buildSettingOnlyDeps (buildSettings baseCtx)
-            then
-              either (reportCannotPruneDependencies verbosity) return $
-                pruneInstallPlanToDependencies
-                  (Map.keysSet targets)
-                  elaboratedPlan'
-            else return elaboratedPlan'
-
-        return (elaboratedPlan'', targets)
-
-    printPlan verbosity baseCtx buildCtx
-
-    buildOutcomes <- runProjectBuildPhase verbosity baseCtx buildCtx
-    runProjectPostBuildPhase verbosity baseCtx buildCtx buildOutcomes
+                Nothing
+                targetSelectors
+  
+          let elaboratedPlan' =
+                pruneInstallPlanToTargets
+                  targetAction
+                  targets
+                  elaboratedPlan
+          elaboratedPlan'' <-
+            if buildSettingOnlyDeps (buildSettings baseCtx)
+              then
+                either (reportCannotPruneDependencies verbosity) return $
+                  pruneInstallPlanToDependencies
+                    (Map.keysSet targets)
+                    elaboratedPlan'
+              else return elaboratedPlan'
+  
+          return (elaboratedPlan'', targets)
+  
+      printPlan verbosity baseCtx buildCtx
+  
+      buildOutcomes <- runProjectBuildPhase verbosity baseCtx buildCtx
+      runProjectPostBuildPhase verbosity baseCtx buildCtx buildOutcomes
+    closeTimingLog
   where
     verbosity = fromFlagOrDefault normal (setupVerbosity $ configCommonFlags configFlags)
 

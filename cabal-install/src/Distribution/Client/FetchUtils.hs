@@ -52,6 +52,9 @@ import Distribution.Client.Types
 import Distribution.Client.GlobalFlags
   ( RepoContext (..)
   )
+import Distribution.Client.TimingLog
+  ( timingLogBracket
+  )
 import Distribution.Client.Utils
   ( ProgressPhase (..)
   , progressMessage
@@ -259,11 +262,12 @@ fetchRepoTarball verbosity' repoCtxt repo pkgid = do
     then do
       info verbosity $ prettyShow pkgid ++ " has already been downloaded."
       return (packageFile repo pkgid)
-    else do
-      progressMessage verbosity ProgressDownloading (prettyShow pkgid)
-      res <- downloadRepoPackage
-      progressMessage verbosity ProgressDownloaded (prettyShow pkgid)
-      return res
+    else
+      timingLogBracket ("Downloading " ++ prettyShow pkgid) $ do
+        progressMessage verbosity ProgressDownloading (prettyShow pkgid)
+        res <- downloadRepoPackage
+        progressMessage verbosity ProgressDownloaded (prettyShow pkgid)
+        return res
   where
     -- whether we download or not is non-deterministic
     verbosity = verboseUnmarkOutput verbosity'

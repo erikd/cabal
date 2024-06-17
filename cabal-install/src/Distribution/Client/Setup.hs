@@ -491,6 +491,13 @@ globalCommand commands =
           (reqArgFlag "FILE")
       , option
           []
+          ["enable-log-timing"]
+          "Enable logging of timing information (defaults to False)"
+          globalLogTiming
+          (\v flags -> flags{globalLogTiming = v})
+          falseArg
+      , option
+          []
           ["ignore-expiry"]
           "Ignore expiry dates on signed metadata (use only in exceptional circumstances)"
           globalIgnoreExpiry

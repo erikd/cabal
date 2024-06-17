@@ -53,6 +53,7 @@ import Distribution.Client.Setup
 import Distribution.Client.SetupWrapper
 import Distribution.Client.SourceFiles
 import Distribution.Client.SrcDist (allPackageSourceFiles)
+import Distribution.Client.TimingLog (timingLogBracket)
 import qualified Distribution.Client.Tar as Tar
 import Distribution.Client.Types hiding
   ( BuildFailure (..)
@@ -186,44 +187,49 @@ buildAndRegisterUnpackedPackage
     delegate $
       PBConfigurePhase $
         annotateFailure mlogFile ConfigureFailed $
-          setup configureCommand Cabal.configCommonFlags configureFlags configureArgs
+          timingLogBracket ("Configure " ++ unUnitId (installedUnitId rpkg)) $ 
+            setup configureCommand Cabal.configCommonFlags configureFlags configureArgs
 
     -- Build phase
     delegate $
       PBBuildPhase $
         annotateFailure mlogFile BuildFailed $ do
-          setup buildCommand Cabal.buildCommonFlags (return . buildFlags) buildArgs
+          timingLogBracket ("Build " ++ unUnitId (installedUnitId rpkg)) $ 
+            setup buildCommand Cabal.buildCommonFlags (return . buildFlags) buildArgs
 
     -- Haddock phase
     whenHaddock $
       delegate $
         PBHaddockPhase $
           annotateFailure mlogFile HaddocksFailed $ do
-            setup haddockCommand Cabal.haddockCommonFlags (return . haddockFlags) haddockArgs
+            timingLogBracket ("Haddock " ++  unUnitId (installedUnitId rpkg)) $
+              setup haddockCommand Cabal.haddockCommonFlags (return . haddockFlags) haddockArgs
 
     -- Install phase
     delegate $
       PBInstallPhase
         { runCopy = \destdir ->
             annotateFailure mlogFile InstallFailed $
-              setup Cabal.copyCommand Cabal.copyCommonFlags (return . copyFlags destdir) copyArgs
+              timingLogBracket ("InstallCopy " ++  unUnitId (installedUnitId rpkg)) $
+                setup Cabal.copyCommand Cabal.copyCommonFlags (return . copyFlags destdir) copyArgs
         , runRegister = \pkgDBStack registerOpts ->
             annotateFailure mlogFile InstallFailed $ do
-              -- We register ourselves rather than via Setup.hs. We need to
-              -- grab and modify the InstalledPackageInfo. We decide what
-              -- the installed package id is, not the build system.
-              ipkg0 <- generateInstalledPackageInfo
-              let ipkg = ipkg0{Installed.installedUnitId = uid}
-              criticalSection registerLock $
-                Cabal.registerPackage
-                  verbosity
-                  compiler
-                  progdb
-                  Nothing
-                  (coercePackageDBStack pkgDBStack)
-                  ipkg
-                  registerOpts
-              return ipkg
+              timingLogBracket ("InstallRegister " ++  unUnitId (installedUnitId rpkg)) $ do
+                -- We register ourselves rather than via Setup.hs. We need to
+                -- grab and modify the InstalledPackageInfo. We decide what
+                -- the installed package id is, not the build system.
+                ipkg0 <- generateInstalledPackageInfo
+                let ipkg = ipkg0{Installed.installedUnitId = uid}
+                criticalSection registerLock $
+                  Cabal.registerPackage
+                    verbosity
+                    compiler
+                    progdb
+                    Nothing
+                    (coercePackageDBStack pkgDBStack)
+                    ipkg
+                    registerOpts
+                return ipkg
         }
 
     -- Test phase
@@ -231,14 +237,16 @@ buildAndRegisterUnpackedPackage
       delegate $
         PBTestPhase $
           annotateFailure mlogFile TestsFailed $
-            setup testCommand Cabal.testCommonFlags (return . testFlags) testArgs
+            timingLogBracket ("Test " ++  unUnitId (installedUnitId rpkg)) $ 
+              setup testCommand Cabal.testCommonFlags (return . testFlags) testArgs
 
     -- Bench phase
     whenBench $
       delegate $
         PBBenchPhase $
           annotateFailure mlogFile BenchFailed $
-            setup benchCommand Cabal.benchmarkCommonFlags (return . benchFlags) benchArgs
+            timingLogBracket ("Bench " ++  unUnitId (installedUnitId rpkg)) $ 
+              setup benchCommand Cabal.benchmarkCommonFlags (return . benchFlags) benchArgs
 
     -- Repl phase
     whenRepl $

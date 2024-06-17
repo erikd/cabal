@@ -125,6 +125,7 @@ import Distribution.Client.RebuildMonad
 import Distribution.Client.Setup hiding (cabalVersion, packageName)
 import Distribution.Client.SetupWrapper
 import Distribution.Client.Store
+import Distribution.Client.TimingLog (timingLogBracket)
 import Distribution.Client.Targets (userToPackageConstraint)
 import Distribution.Client.Types
 import Distribution.Client.Utils (concatMapM, incVersion)
@@ -707,17 +708,18 @@ rebuildInstallPlan
               liftIO $ do
                 notice verbosity "Resolving dependencies..."
                 planOrError <-
-                  foldProgress logMsg (pure . Left) (pure . Right) $
-                    planPackages
-                      verbosity
-                      compiler
-                      platform
-                      solverSettings
-                      (installedPackages <> installedPkgIndex)
-                      sourcePkgDb
-                      pkgConfigDB
-                      localPackages
-                      localPackagesEnabledStanzas
+                  timingLogBracket "Creating build plan" $ 
+                    foldProgress logMsg (pure . Left) (pure . Right) $
+                      planPackages
+                        verbosity
+                        compiler
+                        platform
+                        solverSettings
+                        (installedPackages <> installedPkgIndex)
+                        sourcePkgDb
+                        pkgConfigDB
+                        localPackages
+                        localPackagesEnabledStanzas
                 case planOrError of
                   Left msg -> do
                     reportPlanningFailure projectConfig compiler platform localPackages
