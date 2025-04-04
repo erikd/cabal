@@ -125,7 +125,6 @@ import qualified Distribution.Client.CmdHaddockProject as CmdHaddockProject
 import qualified Distribution.Client.CmdInstall as CmdInstall
 import Distribution.Client.CmdLegacy
 import qualified Distribution.Client.CmdListBin as CmdListBin
-import qualified Distribution.Client.CmdOutdated as CmdOutdated
 import qualified Distribution.Client.CmdPath as CmdPath
 import qualified Distribution.Client.CmdRepl as CmdRepl
 import qualified Distribution.Client.CmdRun as CmdRun
@@ -133,6 +132,7 @@ import qualified Distribution.Client.CmdSdist as CmdSdist
 import qualified Distribution.Client.CmdTarget as CmdTarget
 import qualified Distribution.Client.CmdTest as CmdTest
 import qualified Distribution.Client.CmdUpdate as CmdUpdate
+import qualified Distribution.Client.Outdated as Outdated
 
 import Distribution.Client.Check as Check (check)
 import Distribution.Client.Configure (configure, writeConfigFlags)
@@ -437,7 +437,7 @@ mainWorker args = do
       , regularCmd userConfigCommand userConfigAction
       , regularCmd CmdPath.pathCommand CmdPath.pathAction
       , regularCmd genBoundsCommand genBoundsAction
-      , regularCmd CmdOutdated.outdatedCommand CmdOutdated.outdatedAction
+      , regularCmd Outdated.outdatedCommand Outdated.outdatedAction
       , wrapperCmd hscolourCommand hscolourCommonFlags
       , hiddenCmd formatCommand formatAction
       , hiddenCmd actAsSetupCommand actAsSetupAction
