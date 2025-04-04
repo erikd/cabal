@@ -319,6 +319,7 @@ outdatedAction (ProjectFlags{flagProjectDir, flagProjectFile}, OutdatedFlags{..}
 
     sourcePkgDb <- IndexUtils.getSourcePackages verbosity repoContext
     (comp, platform, _progdb) <- configCompilerAux' configFlags
+    -- We need to detect the `cabal.project` file before this next action.
     deps <-
       if freezeFile
         then depsFromFreezeFile verbosity
