@@ -10,7 +10,8 @@
 -- dependencies in the package description file or freeze file.
 module Distribution.Client.Outdated
   ( outdatedCommand
-  , outdatedAction
+  , outdatedActionOld
+  , outdatedActionNew
   , ListOutdatedSettings (..)
   , listOutdated
   )
@@ -306,6 +307,16 @@ outdatedOptions _showOrParseArgs =
 -------------------------------------------------------------------------------
 -- Action
 -------------------------------------------------------------------------------
+
+outdatedActionNew :: (ProjectFlags, OutdatedFlags) -> [String] -> GlobalFlags -> IO ()
+outdatedActionNew (projectFlags, outdatedFlags) targetStrings globalFlags = do
+  putStrLn "outdatedActionNew"
+  outdatedAction (projectFlags, outdatedFlags) targetStrings globalFlags
+
+outdatedActionOld :: (ProjectFlags, OutdatedFlags) -> [String] -> GlobalFlags -> IO ()
+outdatedActionOld (projectFlags, outdatedFlags) targetStrings globalFlags = do
+  putStrLn "outdatedActionOld"
+  outdatedAction (projectFlags, outdatedFlags) targetStrings globalFlags
 
 -- | Entry point for the 'outdated' command.
 outdatedAction :: (ProjectFlags, OutdatedFlags) -> [String] -> GlobalFlags -> IO ()

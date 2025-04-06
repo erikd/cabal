@@ -437,7 +437,7 @@ mainWorker args = do
       , regularCmd userConfigCommand userConfigAction
       , regularCmd CmdPath.pathCommand CmdPath.pathAction
       , regularCmd genBoundsCommand genBoundsAction
-      , regularCmd Outdated.outdatedCommand Outdated.outdatedAction
+      -- , regularCmd Outdated.outdatedCommand Outdated.outdatedActionOld
       , wrapperCmd hscolourCommand hscolourCommonFlags
       , hiddenCmd formatCommand formatAction
       , hiddenCmd actAsSetupCommand actAsSetupAction
@@ -455,6 +455,7 @@ mainWorker args = do
               CmdHaddockProject.haddockProjectCommand
               CmdHaddockProject.haddockProjectAction
           , newCmd CmdInstall.installCommand CmdInstall.installAction
+          , newCmd Outdated.outdatedCommand Outdated.outdatedActionNew
           , newCmd CmdRun.runCommand CmdRun.runAction
           , newCmd CmdTest.testCommand CmdTest.testAction
           , newCmd CmdBench.benchCommand CmdBench.benchAction
