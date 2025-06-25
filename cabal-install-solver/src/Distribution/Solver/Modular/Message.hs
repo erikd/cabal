@@ -159,7 +159,7 @@ summarizeMessages = go 0
         -- By prepending (i : is) we reverse the order of the instances.
         goPReject l qpn (i : is) c fr ms
     goPReject l qpn is c fr ms =
-        Step (SummarizedMsg $ AtLevel l $ (EntryRejectMany qpn is c fr)) (go l ms)
+        Step (SummarizedMsg $ AtLevel l $ (EntryRejectMany qpn (reverse is) c fr)) (go l ms)
 
     -- Handle many subsequent skipped package instances.
     goPSkip :: Int
@@ -173,7 +173,7 @@ summarizeMessages = go 0
         -- By prepending (i : is) we reverse the order of the instances.
         goPSkip l qpn (i : is) conflicts ms
     goPSkip l qpn is conflicts ms =
-       Step (SummarizedMsg $ AtLevel l $ (EntrySkipMany qpn is conflicts)) (go l ms)
+       Step (SummarizedMsg $ AtLevel l $ (EntrySkipMany qpn (reverse is) conflicts)) (go l ms)
 
 -- | Display the set of 'Conflicts' for a skipped package version.
 showConflicts :: Set CS.Conflict -> String
@@ -288,10 +288,11 @@ showOptions :: QPN -> [POption] -> String
 showOptions _ [] = "unexpected empty list of versions"
 showOptions q [x] = showOption q x
 showOptions q xs = showQPN q ++ "; " ++ (L.intercalate ", "
-  (L.sort
-    -- Don't show the package, just the version
-    [if isJust linkedTo then showOption q x else showI i |
-       x@(POption i linkedTo) <- xs]))
+  [if isJust linkedTo
+    then showOption q x
+    else showI i -- Don't show the package, just the version
+  | x@(POption i linkedTo) <- xs
+  ])
 
 showGR :: QGoalReason -> String
 showGR UserGoal            = " (user goal)"
