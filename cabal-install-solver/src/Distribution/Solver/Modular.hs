@@ -62,7 +62,7 @@ import Distribution.Solver.Types.PackagePreferences
 import Distribution.Solver.Types.PkgConfigDb
          ( PkgConfigDb )
 import Distribution.Solver.Types.Progress
-    ( Progress(..), foldProgress, SummarizedMessage(ErrorMsg) )
+    ( Progress(..), foldProgress, SummarizedMessage(StringMsg) )
 import Distribution.Solver.Types.Variable ( Variable(..) )
 import Distribution.System
          ( Platform(..) )
@@ -139,7 +139,7 @@ solve' :: SolverConfig
        -> Set PN
        -> Progress SummarizedMessage String (Assignment, RevDepMap)
 solve' sc cinfo idx pkgConfigDB pprefs gcs pns =
-    toProgress $ retry (runSolver printFullLog sc) createErrorMsg
+    toProgress $ retry (runSolver printFullLog sc) createStringMsg
   where
     runSolver :: Bool -> SolverConfig
               -> RetryLog SummarizedMessage SolverFailure (Assignment, RevDepMap)
@@ -147,11 +147,11 @@ solve' sc cinfo idx pkgConfigDB pprefs gcs pns =
         displayLogMessages keepLog $
         solve sc' cinfo idx pkgConfigDB pprefs gcs pns
 
-    createErrorMsg :: SolverFailure
+    createStringMsg :: SolverFailure
                    -> RetryLog SummarizedMessage String (Assignment, RevDepMap)
-    createErrorMsg failure@(ExhaustiveSearch cs cm) =
+    createStringMsg failure@(ExhaustiveSearch cs cm) =
       if asBool $ minimizeConflictSet sc
-      then continueWith (mkErrorMsg $ "Found no solution after exhaustively searching the "
+      then continueWith (mkStringMsg $ "Found no solution after exhaustively searching the "
                           ++ "dependency tree. Rerunning the dependency solver "
                           ++ "to minimize the conflict set ({"
                           ++ showConflictSet cs ++ "}).") $
@@ -159,36 +159,36 @@ solve' sc cinfo idx pkgConfigDB pprefs gcs pns =
                \case
                   ExhaustiveSearch cs' cm' ->
                       fromProgress $ Fail $
-                          rerunSolverForErrorMsg cs'
-                       ++ finalErrorMsg sc (ExhaustiveSearch cs' cm')
+                          rerunSolverForStringMsg cs'
+                       ++ finalStringMsg sc (ExhaustiveSearch cs' cm')
                   BackjumpLimitReached ->
                       fromProgress $ Fail $
                           "Reached backjump limit while trying to minimize the "
                        ++ "conflict set to create a better error message. "
                        ++ "Original error message:\n"
-                       ++ rerunSolverForErrorMsg cs
-                       ++ finalErrorMsg sc failure
+                       ++ rerunSolverForStringMsg cs
+                       ++ finalStringMsg sc failure
       else fromProgress $ Fail $
-           rerunSolverForErrorMsg cs ++ finalErrorMsg sc failure
-    createErrorMsg failure@BackjumpLimitReached     =
+           rerunSolverForStringMsg cs ++ finalStringMsg sc failure
+    createStringMsg failure@BackjumpLimitReached     =
         continueWith
-             (mkErrorMsg $ "Backjump limit reached. Rerunning dependency solver to generate "
+             (mkStringMsg $ "Backjump limit reached. Rerunning dependency solver to generate "
               ++ "a final conflict set for the search tree containing the "
               ++ "first backjump.") $
         retry (runSolver printFullLog sc { pruneAfterFirstSuccess = PruneAfterFirstSuccess True }) $
             \case
                ExhaustiveSearch cs _ ->
                    fromProgress $ Fail $
-                   rerunSolverForErrorMsg cs ++ finalErrorMsg sc failure
+                   rerunSolverForStringMsg cs ++ finalStringMsg sc failure
                BackjumpLimitReached  ->
                    -- This case is possible when the number of goals involved in
                    -- conflicts is greater than the backjump limit.
-                   fromProgress $ Fail $ finalErrorMsg sc failure
+                   fromProgress $ Fail $ finalStringMsg sc failure
                     ++ "Failed to generate a summarized dependency solver "
                     ++ "log due to low backjump limit."
 
-    rerunSolverForErrorMsg :: ConflictSet -> String
-    rerunSolverForErrorMsg cs =
+    rerunSolverForStringMsg :: ConflictSet -> String
+    rerunSolverForStringMsg cs =
       let sc' = sc {
                     goalOrder = Just goalOrder'
                   , maxBackjumps = Just 0
@@ -205,8 +205,8 @@ solve' sc cinfo idx pkgConfigDB pprefs gcs pns =
     messages :: Progress step fail done -> [step]
     messages = foldProgress (:) (const []) (const [])
 
-mkErrorMsg :: String -> SummarizedMessage
-mkErrorMsg msg = ErrorMsg msg
+mkStringMsg :: String -> SummarizedMessage
+mkStringMsg msg = StringMsg msg
 
 -- | Try to remove variables from the given conflict set to create a minimal
 -- conflict set.
@@ -276,7 +276,7 @@ tryToMinimizeConflictSet runSolver sc cs cm =
       | not (v `CS.member` smallestKnownCS) =
           fromProgress $ Fail $ ExhaustiveSearch smallestKnownCS smallestKnownCM
       | otherwise =
-        continueWith (mkErrorMsg $ "Trying to remove variable " ++ varStr ++ " from the "
+        continueWith (mkStringMsg $ "Trying to remove variable " ++ varStr ++ " from the "
                       ++ "conflict set.") $
         retry (runSolver sc') $ \case
             err@(ExhaustiveSearch cs' _)
@@ -288,14 +288,14 @@ tryToMinimizeConflictSet runSolver sc cs cm =
                                   ++ "conflict set."
                   in -- Use the new conflict set, even if v wasn't removed,
                      -- because other variables may have been removed.
-                     failWith (mkErrorMsg $ msg ++ " Continuing with " ++ showCS cs' ++ ".") err
+                     failWith (mkStringMsg $ msg ++ " Continuing with " ++ showCS cs' ++ ".") err
               | otherwise ->
-                  failWith (mkErrorMsg $ "Failed to find a smaller conflict set. The new "
+                  failWith (mkStringMsg $ "Failed to find a smaller conflict set. The new "
                              ++ "conflict set is not a subset of the previous "
                              ++ "conflict set: " ++ showCS cs') $
                   ExhaustiveSearch smallestKnownCS smallestKnownCM
             BackjumpLimitReached ->
-                failWith (mkErrorMsg "Reached backjump limit while minimizing conflict set.")
+                failWith (mkStringMsg "Reached backjump limit while minimizing conflict set.")
                          BackjumpLimitReached
       where
         varStr = "\"" ++ showVar v ++ "\""
@@ -332,8 +332,8 @@ toVar (PackageVar qpn)    = P qpn
 toVar (FlagVar    qpn fn) = F (FN qpn fn)
 toVar (StanzaVar  qpn sn) = S (SN qpn sn)
 
-finalErrorMsg :: SolverConfig -> SolverFailure -> String
-finalErrorMsg sc failure =
+finalStringMsg :: SolverConfig -> SolverFailure -> String
+finalStringMsg sc failure =
     case failure of
       ExhaustiveSearch cs cm ->
           "After searching the rest of the dependency tree exhaustively, "

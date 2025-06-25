@@ -32,4 +32,4 @@ data Entry
 
 data EntryAtLevel = AtLevel Int Entry
 
-data SummarizedMessage = SummarizedMsg EntryAtLevel | ErrorMsg String
+data SummarizedMessage = SummarizedMsg EntryAtLevel | StringMsg String

@@ -72,7 +72,7 @@ data Message =
 
 renderSummarizedMessage :: SummarizedMessage -> String
 renderSummarizedMessage (SummarizedMsg i) = displayMessageAtLevel i
-renderSummarizedMessage (ErrorMsg s) = s
+renderSummarizedMessage (StringMsg s) = s
 
 displayMessageAtLevel :: EntryAtLevel -> String
 displayMessageAtLevel (AtLevel l msg) =
