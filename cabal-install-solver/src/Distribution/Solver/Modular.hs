@@ -310,9 +310,9 @@ tryToMinimizeConflictSet runSolver sc cs cm =
 
     -- Like 'retry', except that it only applies the input function when the
     -- backjump limit has not been reached.
-    retryNoSolution :: RetryLog SummarizedMessage SolverFailure done
-                    -> (ConflictSet -> ConflictMap -> RetryLog SummarizedMessage SolverFailure done)
-                    -> RetryLog SummarizedMessage SolverFailure done
+    retryNoSolution :: RetryLog step SolverFailure done
+                    -> (ConflictSet -> ConflictMap -> RetryLog step SolverFailure done)
+                    -> RetryLog step SolverFailure done
     retryNoSolution lg f = retry lg $ \case
         ExhaustiveSearch cs' cm' -> f cs' cm'
         BackjumpLimitReached     -> fromProgress (Fail BackjumpLimitReached)
