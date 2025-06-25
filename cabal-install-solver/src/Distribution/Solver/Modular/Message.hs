@@ -95,13 +95,7 @@ displayMessage (EntrySkipMany qsn b cs) = "skipping: " ++ showOptions qsn b ++ "
 -- Instead of displaying `aeson-1.0.2.1, aeson-1.0.2.0, aeson-1.0.1.0, ...`,
 -- the following line aims to display `aeson: 1.0.2.1, 1.0.2.0, 1.0.1.0, ...`.
 --
-displayMessage (EntryRejectMany qpn is c fr) = "rejecting: " ++ showQPNConflictSet qpn is ++ showFR c fr
-
-showQPNConflictSet :: QPN -> [POption] -> String
-showQPNConflictSet qpn popts =
-  case popts of
-    [] -> ""
-    x:xs -> L.intercalate ", " (showOption qpn x : map (\(POption i _) -> showI i) xs)
+displayMessage (EntryRejectMany qpn is c fr) = "rejecting: " ++ showOptions qpn is ++ showFR c fr
 
 -- | Transforms the structured message type to actual messages (SummarizedMessage s).
 --
