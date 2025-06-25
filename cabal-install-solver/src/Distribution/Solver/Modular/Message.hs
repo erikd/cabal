@@ -58,7 +58,7 @@ import Distribution.Types.UnqualComponentName
 
 import Text.PrettyPrint ( nest, render )
 
--- A data type to hold state information for the modular solver.
+-- A data type to hold log information from the modular solver.
 data Message =
     Enter           -- ^ increase indentation level
   | Leave           -- ^ decrease indentation level
